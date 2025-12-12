@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Memory Game — Story of Us (Complete)</title>
+  <style>
+    :root{
+      --bg:#071021;
+      --accent:#ff9ab3;
+      --muted:#94a3b8;
+      --glass: rgba(255,255,255,0.04);
+      --glass-2: rgba(255,255,255,0.02);
+      --success:#7ee787;
+      --danger:#ff7b7b;
+      --font: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    *{box-sizing:border-box;font-family:var(--font)}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg) 0%, #081427 70%);color:#e6eef8}
+    .app{max-width:1200px;margin:18px auto;padding:16px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));min-height:820px;position:relative;overflow:hidden;box-shadow:0 10px 40px rgba(2,6,23,0.6)}
+    header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px}
+    h1{margin:0;font-size:24px;color:var(--accent)}
+    .muted{color:var(--muted);font-size:13px}
+    main{display:flex;gap:16px}
+    .main-content{flex:1;min-width:0;margin-right:400px;padding-bottom:28px}
+    aside.stage{position:fixed;right:20px;top:88px;width:360px;height:560px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.04));border-radius:12px;padding:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.02);display:flex;flex-direction:column;align-items:center;gap:12px;z-index:60}
+    .scene{display:none;padding:18px;height:calc(100vh - 160px);overflow:auto}
+    .scene.active{display:block}
+    .title-big{font-size:30px;margin-bottom:8px}
+    button,.btn{background:linear-gradient(90deg,var(--accent), #ffccd8);border:0;padding:10px 14px;border-radius:999px;color:#051025;font-weight:700;cursor:pointer;box-shadow:0 8px 22px rgba(255,154,179,0.12)}
+    .small{font-size:13px;padding:6px 8px;border-radius:8px}
+    .skip{background:transparent;border:1px dashed rgba(255,255,255,0.06);color:var(--muted)}
+    input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:inherit;outline:none}
+    .options{display:flex;flex-wrap:wrap;gap:8px}
+    .option{background:var(--glass-2);padding:10px 12px;border-radius:10px;cursor:pointer;border:1px solid transparent}
+    .option.correct{border-color:var(--success)}
+    .option.wrong{border-color:var(--danger)}
+    .log{background:linear-gradient(90deg,#061426,#08162a);padding:10px;border-radius:8px;color:var(--muted);font-size:13px}
+    footer{display:flex;justify-content:space-between;gap:12px;margin-top:12px}
+
+    /* character */
+    .character{width:160px;height:320px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;transform-origin:center bottom;transition:transform .4s ease;position:relative}
+    .character .head{width:96px;height:96px;border-radius:50%;background:linear-gradient(180deg,#ffe9f0,#ffdfec);position:relative;margin-top:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(0,0,0,0.25)}
+    .hair{position:absolute;top:-6px;left:0;right:0;height:56px;border-radius:56px;background:linear-gradient(180deg,#6f2b6f,#9b3a83);z-index:2}
+    .eyes{position:absolute;top:40px;display:flex;gap:12px;left:0;right:0;justify-content:center}
+    .eye{width:12px;height:12px;border-radius:50%;background:#051025}
+    .mouth{position:absolute;top:60px;width:26px;height:12px;border-radius:12px;background:#ff7b9a}
+    .blush{position:absolute;top:60px;width:18px;height:10px;border-radius:50%;background:rgba(255,123,154,0.18)}
+    .blush.left{left:14px}.blush.right{right:14px}
+    .body{width:110px;height:150px;background:linear-gradient(180deg,#ffdce8,#ffbcd1);border-radius:20px;margin-top:12px;position:relative;display:flex;align-items:flex-start;justify-content:center;padding-top:18px;box-shadow:0 10px 24px rgba(0,0,0,0.25)}
+    .arm{position:absolute;width:20px;height:66px;background:linear-gradient(180deg,#ffdfe6,#ffced8);border-radius:14px;top:74px}
+    .arm.left{left:-6px;transform:rotate(-6deg)}.arm.right{right:-6px;transform:rotate(6deg)}
+    .arm.wave{animation:wave 1.1s infinite}@keyframes wave{0%{transform:rotate(6deg)}25%{transform:rotate(30deg)}50%{transform:rotate(6deg)}75%{transform:rotate(-8deg)}100%{transform:rotate(6deg)}}
+    .legs{display:flex;gap:12px;margin-top:16px}.leg{width:14px;height:64px;background:linear-gradient(180deg,#ffdfe6,#ffc9d7);border-radius:10px}
+    .character.kiss{transform:translateY(-8px) scale(1.02) rotate(-3deg)}
+    .character.crying .mouth{background:#7b9cff;height:8px;border-radius:8px;transform:translateY(6px)}
+    .character.crying .eye{transform:scaleY(0.6)}
+    .tear{position:absolute;width:8px;height:18px;background:linear-gradient(180deg,#7fd3ff,#3fb6ff);border-radius:8px;top:72px;animation:tearFall 0.9s linear infinite}
+    .tear.left{left:44px}.tear.right{right:44px}
+    @keyframes tearFall{0%{transform:translateY(0);opacity:1}100%{transform:translateY(26px);opacity:0}}
+
+    /* Maze & puzzle */
+    .maze-wrap{display:flex;gap:16px;align-items:flex-start}
+    #maze{background:#071426;border-radius:8px;padding:10px;display:grid;gap:4px;max-width:100%}
+    .cell{background:#071824;border-radius:4px;display:flex;align-items:center;justify-content:center;color:transparent}
+    .cell.wall{background:#042033}
+    .player{background:linear-gradient(180deg,#ffdce3,#ffb7cc);border:2px solid rgba(255,255,255,0.12);color:#051025}
+    .goal{background:linear-gradient(180deg,#c7fffc,#a8fff9);border:2px solid rgba(255,255,255,0.06);color:#051025}
+    .puzzle{width:520px;height:520px;border-radius:8px;background:#071426;padding:10px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:6px}
+    .piece{background:#111827;border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:grab}
+    .piece img{width:100%;height:100%;object-fit:cover}
+    .completed{border:3px solid var(--success);box-shadow:0 12px 40px rgba(126,231,135,0.12)}
+
+    @media (max-width:1100px){
+      .main-content{margin-right:0}
+      aside.stage{position:relative;right:auto;top:auto;width:100%;height:auto;margin-top:12px}
+      main{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Memory Game — Story of Us">
+    <header>
+      <h1>Memory Game</h1>
+      <div class="muted">A personalized journey of memories</div>
+    </header>
+
+    <aside id="global-stage" class="stage" aria-hidden="false">
+      <div id="stage-character" class="character" aria-hidden="false">
+        <div class="heart">❤</div>
+        <div class="head">
+          <div class="hair"></div>
+          <div class="eyes"><div class="eye"></div><div class="eye"></div></div>
+          <div class="mouth"></div>
+          <div class="blush left"></div><div class="blush right"></div>
+        </div>
+        <div class="arm left"></div>
+        <div class="body"><div class="torso-deco"></div><div class="dress-deco"></div></div>
+        <div class="arm right wave"></div>
+        <div class="legs"><div class="leg"></div><div class="leg"></div></div>
+      </div>
+      <div id="stage-bubble" style="width:100%;background:var(--glass);padding:10px;border-radius:10px;text-align:center">Hey! Press START to begin</div>
+    </aside>
+
+    <main>
+      <div class="main-content">
+        <!-- Scenes (Start -> Kiss -> Short Questions -> Describe -> Favorite Person -> Maze -> Door Locks -> Hug -> Deep -> Wish -> Puzzle -> Final) -->
+        <section id="start" class="scene active">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%">
+            <div class="title-big">Memory Game</div>
+            <div class="muted">A simple and loving memory game</div>
+            <button id="startBtn" class="btn" style="margin-top:18px">START</button>
+          </div>
+        </section>
+
+        <section id="kiss" class="scene">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%">
+            <div class="title-big">Ready to start?</div>
+            <div class="muted">Press Ready to get a kiss</div>
+            <button id="readyBtn" class="btn">Ready</button>
+          </div>
+        </section>
+
+        <section id="short-questions" class="scene">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:18px;font-weight:700">Short Questions</div>
+              <div class="muted">Answer or skip — she will react</div>
+            </div>
+            <div class="muted small" id="sq-counter">Question 1 of 6</div>
+          </div>
+          <div id="sq-content" style="margin-top:12px"></div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button id="sq-skip" class="small skip">Skip</button>
+            <button id="sq-next" class="small" style="display:none">Next</button>
+          </div>
+        </section>
+
+        <section id="describe" class="scene">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:18px;font-weight:700">Describe me (in English)</div>
+            <textarea id="desc-input" rows="5" placeholder="Describe her..."></textarea>
+            <div style="display:flex;justify-content:flex-end;gap:8px">
+              <button id="desc-skip" class="small skip">Skip</button>
+              <button id="desc-next" class="small">Continue</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="favorite-person" class="scene">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+            <div class="title-big">This is my favorite person!</div>
+            <div class="muted">They stand side by side — then he disappears</div>
+
+            <div style="display:flex;gap:16px;align-items:flex-end;margin-top:12px">
+              <div style="display:flex;flex-direction:column;align-items:center">
+                <div id="girl-character-main" class="character" style="transform:scale(0.98)">
+                  <div class="heart">❤</div>
+                  <div class="head"><div class="hair"></div><div class="eyes"><div class="eye"></div><div class="eye"></div></div><div class="mouth"></div><div class="blush left"></div><div class="blush right"></div></div>
+                  <div class="arm left"></div><div class="body"><div class="torso-deco"></div><div class="dress-deco"></div></div><div class="arm right wave"></div><div class="legs"><div class="leg"></div><div class="leg"></div></div>
+                </div>
+                <div class="muted">Manon</div>
+              </div>
+
+              <div style="display:flex;flex-direction:column;align-items:center">
+                <div id="boy-character-main" class="character" style="transform:scale(0.96);background:linear-gradient(180deg,#d9f7ff,#cfeffb)">
+                  <div class="heart">💙</div>
+                  <div class="head"><div class="hair" style="background:linear-gradient(180deg,#3a3a6a,#5e3b8a)"></div><div class="eyes"><div class="eye"></div><div class="eye"></div></div><div class="mouth" style="background:#b3e6ff"></div><div class="blush left" style="background:rgba(179,230,255,0.12)"></div><div class="blush right" style="background:rgba(179,230,255,0.12)"></div></div>
+                  <div class="arm left" style="background:linear-gradient(180deg,#d6f5ff,#bfefff)"></div><div class="body" style="background:linear-gradient(180deg,#d9f7ff,#cfeffb)"><div class="torso-deco"></div><div class="dress-deco" style="background:linear-gradient(90deg,#eaffff, rgba(255,255,255,0.02))"></div></div><div class="arm right wave" style="background:linear-gradient(180deg,#d6f5ff,#bfefff)"></div><div class="legs"><div class="leg"></div><div class="leg"></div></div>
+                </div>
+                <div class="muted">Him</div>
+              </div>
+            </div>
+
+            <div style="margin-top:18px">
+              <button id="to-fav-next" class="btn">Start Maze</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="maze-scene" class="scene">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:18px;font-weight:700">Maze — Reach the girl</div>
+                <div class="muted">Use arrow keys or the control buttons to move</div>
+              </div>
+              <div class="muted small" id="maze-size-label">Size: 15×15</div>
+            </div>
+
+            <div class="maze-wrap">
+              <div id="maze" aria-label="maze-grid"></div>
+
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="font-weight:700">Controls</div>
+                <div style="display:flex;gap:8px"><div class="arrow small" id="up">▲</div></div>
+                <div style="display:flex;gap:8px"><div class="arrow small" id="left">◄</div><div class="arrow small" id="down">▼</div><div class="arrow small" id="right">►</div></div>
+                <div style="margin-top:8px"><button id="reset-maze" class="small">Reset</button></div>
+              </div>
+            </div>
+
+            <div id="maze-log" class="log">Start at the boy's spot and reach the girl.</div>
+          </div>
+        </section>
+
+        <section id="door-locks" class="scene">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font-size:18px;font-weight:700">Door Locks — Answer & Unlock</div>
+            <div class="muted">Answer four questions to open the door</div>
+            <div id="lock-q-area"></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div class="locks" id="locks-status" style="display:flex;gap:12px;align-items:center">
+                <div class="lock" id="lock1">🔒<div style="font-size:12px;margin-top:6px">1</div></div>
+                <div class="lock" id="lock2">🔒<div style="font-size:12px;margin-top:6px">2</div></div>
+                <div class="lock" id="lock3">🔒<div style="font-size:12px;margin-top:6px">3</div></div>
+                <div class="lock" id="lock4">🔒<div style="font-size:12px;margin-top:6px">4</div></div>
+              </div>
+              <button id="try-door" class="btn" disabled>Try Door</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="hug" class="scene">
+          <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+            <div class="title-big">We made it! ❤</div>
+            <div class="muted">A warm hug after the journey</div>
+            <div style="display:flex;gap:12px"><div id="p-boy" class="person">👨</div><div id="p-girl" class="person">👩</div></div>
+            <div><button id="start-deep" class="btn">Continue to Deep Questions</button></div>
+          </div>
+        </section>
+
+        <section id="deep" class="scene">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="font-size:18px;font-weight:700">Deep Questions</div>
+            <div class="muted">Answer honestly — responses saved automatically</div>
+            <div id="deep-q-area" style="margin-top:8px;display:flex;flex-direction:column;gap:12px"></div>
+            <div style="display:flex;justify-content:flex-end;gap:8px"><button id="deep-skip" class="small skip">Skip All</button><button id="deep-next" class="small">Continue</button></div>
+          </div>
+        </section>
+
+        <section id="wish" class="scene">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+            <div class="title-big">MAKE A WISH…</div>
+            <div class="muted">Hold hands and wish together</div>
+            <div style="font-size:48px">🤝</div>
+            <div><button id="start-puzzle" class="btn">Make the Puzzle</button></div>
+          </div>
+        </section>
+
+        <section id="puzzle" class="scene">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div id="puzzle-area" class="puzzle" aria-label="puzzle-area"></div>
+            <div style="min-width:260px;display:flex;flex-direction:column;gap:8px">
+              <div class="muted">Default image: the link you provided will be used automatically</div>
+              <label class="muted">Image URL (optional):</label>
+              <input id="image-url" type="text" placeholder="Paste direct image URL">
+              <div style="display:flex;gap:8px"><button id="use-url" class="small">Use URL</button><label class="small skip" style="cursor:pointer">Upload file<input id="upload-file" type="file" accept="image/*" style="display:none"></label></div>
+              <div id="img-error" class="muted" style="color:#ffb3c1"></div>
+              <div style="display:flex;gap:8px"><button id="shuffle" class="small">Shuffle</button><button id="check-puzzle" class="small">Check</button><button id="reset-puzzle" class="small skip">Reset Image</button></div>
+              <div class="muted">If images fail locally, run: python -m http.server</div>
+            </div>
+          </div>
+          <div id="puzzle-msg" class="muted" style="margin-top:12px"></div>
+        </section>
+
+        <section id="final" class="scene">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+            <div class="title-big">All our memories… just for you 😘</div>
+            <div class="muted">Thank you for playing — the journey is complete.</div>
+            <div style="display:flex;gap:12px"><button id="restart" class="btn">Play Again</button></div>
+          </div>
+        </section>
+
+        <footer style="margin-top:12px">
+          <div id="status-log" class="log">Progress saved locally in your browser.</div>
+          <div class="muted">Enjoy the journey ❤</div>
+        </footer>
+      </div>
+    </main>
+
+  <script>
+  (function(){
+    // Use the image link you provided as the default puzzle image
+    const PROVIDED_IMAGE_URL = 'https://i.ibb.co/mVYHw6MG/Whats-App-Image-2025-12-13-at-12-40-31-AM.jpg';
+
+    document.addEventListener('DOMContentLoaded', ()=> {
+      const $ = s => document.querySelector(s);
+      const $$ = s => Array.from(document.querySelectorAll(s));
+      function showScene(id){
+        $$('section.scene').forEach(s => s.classList.remove('active'));
+        const el = document.getElementById(id);
+        if(el) el.classList.add('active');
+        const hideAside = ['favorite-person'];
+        document.getElementById('global-stage').style.display = hideAside.includes(id) ? 'none' : '';
+        log('Scene: ' + id);
+      }
+      function log(msg){ const st = $('#status-log'); if(st) st.textContent = msg; }
+      function saveAnswers(){ try{ localStorage.setItem('sou_game_answers', JSON.stringify(state.answers)); log('Answers saved'); }catch(e){ console.warn(e); } }
+      function loadAnswers(){ try{ const raw = localStorage.getItem('sou_game_answers'); if(raw) state.answers = JSON.parse(raw); }catch(e){ state.answers = {}; } }
+      function normalize(t){ return (t||'').toString().trim().toLowerCase().replace(/\s+/g,' '); }
+      function shuffleArray(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } }
+
+      // state (same as before)
+      const state = {
+        answers: {},
+        shortQIndex: 0,
+        shortQs: [
+          { id:'q1', q:"How long have we known each other?", type:'choices', choices:['10','12','13','14'], correct:'13', correctMsg:'SHATER YA SAFSOFTY 😘', wrongMsg:'I am sad 😢' },
+          { id:'q2', q:"Do you remember how we met?", type:'text' },
+          { id:'q3', q:"What was your first impression of me?", type:'text' },
+          { id:'q4', q:"What is my birthdate?", type:'text', correctAnswers:['20/7/2005','20-7-2005','20 7 2005','20 july 2005','20/07/2005'] },
+          { id:'q5', q:"What is my favorite food?", type:'text' },
+          { id:'q6', q:"What is my favorite drink?", type:'text' }
+        ],
+        deepQs: [ "What reminds you of me the most?","One trait of mine you really like?","One trait of mine you don’t like and wish I could change?","If we could go back in time, would you want to meet me in the same place or somewhere new?","What’s the thing we are most different in?","When you’re upset… what’s the best way you like me to make it up to you?","Place you’d love us to visit together someday?","One thing I could do to make you say yes to whatever I ask?","Thing that shows you my love for you?","Your love language?","If you could repeat one day we spent together, which day?","If you could change one thing that happened to us, what?","Your favorite memory of us?","Any question for me?" ],
+        maze: { rows:15, cols:15, grid:[], start:{r:13,c:1}, end:{r:1,c:13} },
+        locks: [
+          { q:"If I were you, would I choose Burger or Pizza?", choices:['Burger','Pizza'], correct:'pizza' },
+          { q:"If I’m sad, would I sit alone or in the group?", choices:['Alone','Group'], correct:'alone' },
+          { q:"If I have free time, would I draw or listen to music?", choices:['Draw','Listen to music'], correct:'draw' },
+          { q:"If I’m watching the sky, would I choose Sunset or Sunrise?", choices:['Sunset','Sunrise'], correct:'sunrise' }
+        ],
+        puzzle: { size:3, pieces:[], solved:false, imageSrc: PROVIDED_IMAGE_URL }
+      };
+
+      loadAnswers();
+
+      // START
+      $('#startBtn').addEventListener('click', ()=>{
+        $('#stage-bubble').innerHTML = `HEY BABEE! HERE'S YOUR FAV MANON<br><small class="muted">I made this game just for you, with all my love…</small>`;
+        showScene('kiss');
+      });
+
+      // READY -> KISS
+      $('#readyBtn').addEventListener('click', ()=>{
+        const stageChar = $('#stage-character');
+        $('#stage-bubble').textContent = 'Wait… take a kiss first 😘';
+        stageChar.classList.add('kiss');
+        setTimeout(()=> { stageChar.classList.remove('kiss'); showScene('short-questions'); initShortQuestions(); }, 1800);
+      });
+
+      // SHORT QUESTIONS
+      function initShortQuestions(){
+        state.shortQIndex = 0;
+        renderShortQuestion();
+        $('#sq-skip').onclick = ()=> handleShortAnswer(null,true);
+      }
+      function renderShortQuestion(){
+        const idx = state.shortQIndex; const q = state.shortQs[idx];
+        $('#sq-counter').textContent = `Question ${idx+1} of ${state.shortQs.length}`;
+        const area = $('#sq-content'); area.innerHTML = '';
+        const qh = document.createElement('div'); qh.style.fontWeight='700'; qh.style.marginBottom='8px'; qh.textContent = q.q; area.appendChild(qh);
+        if(q.type === 'choices'){
+          const opts = document.createElement('div'); opts.className = 'options';
+          q.choices.forEach(choice => {
+            const b = document.createElement('div'); b.className = 'option'; b.textContent = choice;
+            b.addEventListener('click', ()=> handleShortAnswer(choice,false));
+            opts.appendChild(b);
+          });
+          area.appendChild(opts);
+        } else {
+          const input = document.createElement('input'); input.type='text'; input.placeholder = 'Type your answer...'; area.appendChild(input);
+          const submit = document.createElement('button'); submit.className='small'; submit.textContent='Submit'; submit.onclick = ()=> handleShortAnswer(input.value,false);
+          const wrap = document.createElement('div'); wrap.style.marginTop='8px'; wrap.appendChild(submit); area.appendChild(wrap);
+        }
+        $('#sq-next').style.display='none';
+      }
+      function handleShortAnswer(answer, skipped){
+        const idx = state.shortQIndex; const q = state.shortQs[idx]; const bubble = $('#stage-bubble');
+        if(skipped){ bubble.textContent = "Skipped…"; state.answers[q.id] = ""; }
+        else {
+          state.answers[q.id] = answer;
+          if(q.type === 'choices'){
+            if(String(answer) === String(q.correct)) bubble.textContent = q.correctMsg || 'Correct!';
+            else bubble.textContent = q.wrongMsg || 'Wrong answer';
+          } else {
+            if(q.id === 'q4'){
+              const ok = (q.correctAnswers||[]).some(c=> normalize(c) === normalize(answer));
+              bubble.textContent = ok ? 'Correct!' : 'I expected you to know that…';
+            } else bubble.textContent = 'Thanks!';
+          }
+        }
+        saveAnswers();
+        $('#sq-next').style.display='inline-block';
+        $('#sq-next').onclick = ()=>{
+          state.shortQIndex++;
+          if(state.shortQIndex >= state.shortQs.length){
+            $('#stage-bubble').innerHTML = `Mmm… looks like you know me well 😳<br><small class="muted">Just one more thing left to move to the next level.</small>`;
+            saveAnswers();
+            setTimeout(()=> showScene('describe'), 1000);
+          } else renderShortQuestion();
+        };
+      }
+
+      // DESCRIBE
+      $('#desc-next').addEventListener('click', ()=> { state.answers.describe = $('#desc-input').value || ''; saveAnswers(); showScene('favorite-person'); });
+      $('#desc-skip').addEventListener('click', ()=> { state.answers.describe = ''; saveAnswers(); showScene('favorite-person'); });
+
+      // FAVORITE PERSON
+      $('#to-fav-next').addEventListener('click', ()=>{
+        const boy = $('#boy-character-main'); const girl = $('#girl-character-main');
+        $('#stage-bubble').textContent = '"This is my favorite person!"';
+        boy.style.transition = 'transform 500ms ease, opacity 600ms ease';
+        boy.style.transform = 'translateX(-8px) scale(1.02)';
+        setTimeout(()=> {
+          boy.style.opacity = '0';
+          boy.style.transform = 'translateX(-8px) scale(0.94) rotate(-6deg)';
+          girl.classList.add('crying');
+          if(!girl.querySelector('.tear.left')){
+            const tL = document.createElement('div'); tL.className='tear left'; girl.querySelector('.head').appendChild(tL);
+            const tR = document.createElement('div'); tR.className='tear right'; girl.querySelector('.head').appendChild(tR);
+          }
+          $('#stage-bubble').textContent = "My heart is broken… he's far away 😢 Help me — solve the maze to bring him back!";
+          setTimeout(()=> { $('#maze-size-label').textContent = `Size: ${state.maze.rows}×${state.maze.cols}`; showScene('maze-scene'); initMaze(); }, 900);
+        }, 700);
+      });
+
+      // MAZE generation & control
+      function generateMazeDFS(rows, cols){
+        const grid = Array.from({length:rows}, ()=> Array(cols).fill(1));
+        function carve(r,c){
+          grid[r][c] = 0;
+          const dirs = [[-2,0],[2,0],[0,-2],[0,2]];
+          shuffleArray(dirs);
+          for(const [dr,dc] of dirs){
+            const nr = r+dr, nc = c+dc;
+            if(nr>0 && nr<rows && nc>0 && nc<cols && grid[nr][nc] === 1){
+              grid[r+dr/2][c+dc/2] = 0;
+              carve(nr,nc);
+            }
+          }
+        }
+        const sr = (state.maze.start.r % 2 === 1) ? state.maze.start.r : Math.max(1,state.maze.start.r-1);
+        const sc = (state.maze.start.c % 2 === 1) ? state.maze.start.c : Math.max(1,state.maze.start.c-1);
+        carve(sr,sc);
+        return grid;
+      }
+
+      let playerPos = {};
+      function initMaze(){
+        if(state.maze.rows % 2 === 0) state.maze.rows++;
+        if(state.maze.cols % 2 === 0) state.maze.cols++;
+        state.maze.grid = generateMazeDFS(state.maze.rows, state.maze.cols);
+        state.maze.grid[state.maze.start.r][state.maze.start.c] = 0;
+        state.maze.grid[state.maze.end.r][state.maze.end.c] = 0;
+        playerPos = { r: state.maze.start.r, c: state.maze.start.c };
+        renderMaze();
+        const mazeEl = $('#maze');
+        mazeEl.style.gridTemplateColumns = `repeat(${state.maze.cols}, 1fr)`;
+        mazeEl.style.gridTemplateRows = `repeat(${state.maze.rows}, 1fr)`;
+        $('#maze-log').textContent = "Use arrows or buttons to move. Reach the girl!";
+        $('#up').onclick = ()=> movePlayer(-1,0);
+        $('#down').onclick = ()=> movePlayer(1,0);
+        $('#left').onclick = ()=> movePlayer(0,-1);
+        $('#right').onclick = ()=> movePlayer(0,1);
+        $('#reset-maze').onclick = ()=> initMaze();
+        window.onkeydown = (e)=> {
+          if(!document.getElementById('maze-scene').classList.contains('active')) return;
+          const k = e.key;
+          if(k==='ArrowUp') movePlayer(-1,0);
+          if(k==='ArrowDown') movePlayer(1,0);
+          if(k==='ArrowLeft') movePlayer(0,-1);
+          if(k==='ArrowRight') movePlayer(0,1);
+        };
+      }
+      function renderMaze(){
+        const mazeEl = $('#maze'); mazeEl.innerHTML = '';
+        const g = state.maze.grid;
+        for(let i=0;i<state.maze.rows;i++){
+          for(let j=0;j<state.maze.cols;j++){
+            const cell = document.createElement('div');
+            cell.className = 'cell ' + (g[i][j] ? 'wall' : '');
+            if(i===playerPos.r && j===playerPos.c){ cell.classList.add('player'); cell.textContent = '🙂'; }
+            else if(i===state.maze.end.r && j===state.maze.end.c){ cell.classList.add('goal'); cell.textContent = '👩'; }
+            mazeEl.appendChild(cell);
+          }
+        }
+      }
+      function movePlayer(dr,dc){
+        const nr = playerPos.r + dr, nc = playerPos.c + dc;
+        if(nr<0||nr>=state.maze.rows||nc<0||nc>=state.maze.cols) return;
+        if(state.maze.grid[nr][nc] === 1){ $('#maze-log').textContent = "Ouch! There's a wall."; return; }
+        playerPos.r = nr; playerPos.c = nc;
+        renderMaze(); $('#maze-log').textContent = `Position: ${nr},${nc}`;
+        if(nr === state.maze.end.r && nc === state.maze.end.c){
+          $('#stage-bubble').textContent = "Yay! We made it 😘";
+          setTimeout(()=> { showScene('door-locks'); initLocks(); }, 900);
+        }
+      }
+
+      // LOCKS
+      function initLocks(){
+        const area = $('#lock-q-area'); area.innerHTML = '';
+        state.locks.forEach((lock, idx)=>{
+          const card = document.createElement('div'); card.style.background='var(--glass)'; card.style.padding='10px'; card.style.borderRadius='8px'; card.style.marginBottom='8px';
+          const qh = document.createElement('div'); qh.style.fontWeight='700'; qh.textContent = lock.q; card.appendChild(qh);
+          const opts = document.createElement('div'); opts.className='options';
+          lock.choices.forEach(ch=>{
+            const b = document.createElement('div'); b.className='option'; b.textContent = ch; b.onclick = ()=> handleLockAnswer(idx,ch); opts.appendChild(b);
+          });
+          card.appendChild(opts); area.appendChild(card);
+        });
+        updateLocksUI();
+      }
+      function handleLockAnswer(idx, choice){
+        const lock = state.locks[idx]; const key = `lock_${idx}`;
+        if(normalize(choice) === normalize(lock.correct)){
+          state.answers[key] = choice; document.getElementById('lock'+(idx+1)).classList.add('open'); document.getElementById('lock'+(idx+1)).textContent = '🔓';
+          $('#stage-bubble').textContent = 'Nice! Lock opened 😊';
+        } else {
+          state.answers[key] = choice; $('#stage-bubble').textContent = 'Wrong… 😢';
+          const el = document.getElementById('lock'+(idx+1)); el.classList.add('wrong-temp'); setTimeout(()=> el.classList.remove('wrong-temp'),700);
+        }
+        saveAnswers(); updateLocksUI();
+      }
+      function updateLocksUI(){
+        const allOpen = state.locks.every((l,i)=> normalize(state.answers[`lock_${i}`]||'') === normalize(l.correct));
+        $('#try-door').disabled = !allOpen;
+        if(allOpen) $('#stage-bubble').textContent = "All locks are open!";
+      }
+      $('#try-door').addEventListener('click', ()=> { $('#stage-bubble').textContent = "I'm here for you, baby 😘"; setTimeout(()=> { showScene('hug'); }, 900); });
+
+      // HUG -> DEEP
+      $('#start-deep').addEventListener('click', ()=> {
+        $('#p-boy').classList.add('holding'); $('#p-girl').classList.add('holding');
+        setTimeout(()=> { $('#p-boy').classList.remove('holding'); $('#p-girl').classList.remove('holding'); showScene('deep'); initDeep(); }, 900);
+      });
+
+      // DEEP
+      function initDeep(){
+        const area = $('#deep-q-area'); area.innerHTML = '';
+        state.deepQs.forEach((q, idx)=>{
+          const card = document.createElement('div'); card.style.background='var(--glass)'; card.style.padding='8px'; card.style.borderRadius='8px';
+          const qh = document.createElement('div'); qh.style.fontWeight='700'; qh.textContent = `${idx+1}. ${q}`; card.appendChild(qh);
+          const ta = document.createElement('textarea'); ta.rows=2; ta.placeholder='Type your answer...'; const key = `deep_${idx}`;
+          if(state.answers[key]) ta.value = state.answers[key];
+          ta.onchange = ()=> { state.answers[key] = ta.value; saveAnswers(); };
+          card.appendChild(ta);
+          const sm = document.createElement('div'); sm.style.display='flex'; sm.style.justifyContent='space-between'; sm.style.marginTop='6px';
+          const skip = document.createElement('button'); skip.className='small skip'; skip.textContent='Skip'; skip.onclick = ()=> { ta.value=''; state.answers[key]=''; saveAnswers(); };
+          sm.appendChild(skip); card.appendChild(sm); area.appendChild(card);
+        });
+      }
+      $('#deep-next').addEventListener('click', ()=> { saveAnswers(); showScene('wish'); });
+      $('#deep-skip').addEventListener('click', ()=> { for(let i=0;i<state.deepQs.length;i++) state.answers['deep_'+i] = ''; saveAnswers(); showScene('wish'); });
+
+      // WISH -> PUZZLE
+      $('#start-puzzle').addEventListener('click', ()=> { showScene('puzzle'); initPuzzleAuto(); });
+
+      // PUZZLE (default image set to provided link)
+      const DEFAULT_IMAGE = state.puzzle.imageSrc; // uses PROVIDED_IMAGE_URL
+      function loadImage(src, allowCross=true){
+        return new Promise((resolve,reject)=>{
+          const img = new Image();
+          if(allowCross) img.crossOrigin = 'Anonymous';
+          img.onload = ()=> resolve(img);
+          img.onerror = ()=> reject(new Error('Load failed: ' + src));
+          img.src = src;
+        });
+      }
+      async function initPuzzleWithSrc(src){
+        $('#puzzle-msg').textContent = 'Loading image…';
+        $('#img-error').textContent = '';
+        state.puzzle.imageSrc = src;
+        $('#puzzle-area').innerHTML = '';
+        try{
+          const img = await loadImage(src, true);
+          try{
+            const test = document.createElement('canvas'); test.width = img.naturalWidth; test.height = img.naturalHeight; const tctx = test.getContext('2d'); tctx.drawImage(img,0,0); test.toDataURL();
+            buildPiecesFromImage(img); $('#puzzle-msg').textContent = 'Image loaded and sliced.'; return;
+          }catch(e){
+            console.warn('Canvas tainted (CORS), fallback', e);
+            buildPiecesFallback(src); $('#puzzle-msg').textContent = 'Image loaded (fallback). For exact slices upload the image.'; return;
+          }
+        }catch(e){
+          try{ await loadImage(src,false); buildPiecesFallback(src); $('#puzzle-msg').textContent = 'Image loaded (fallback).'; return; }catch(err){ $('#img-error').textContent = 'Could not load image. Upload or paste a direct image URL.'; $('#puzzle-area').innerHTML=''; $('#puzzle-msg').textContent = ''; return; }
+        }
+      }
+      function buildPiecesFromImage(img){
+        const size = state.puzzle.size, rows = size, cols = size;
+        const w = img.naturalWidth, h = img.naturalHeight;
+        const pw = Math.floor(w/cols), ph = Math.floor(h/rows);
+        state.puzzle.pieces = [];
+        for(let r=0;r<rows;r++){
+          for(let c=0;c<cols;c++){
+            const sx = c*pw, sy = r*ph;
+            const canvas = document.createElement('canvas'); canvas.width = pw; canvas.height = ph;
+            const ctx = canvas.getContext('2d'); ctx.drawImage(img, sx, sy, pw, ph, 0, 0, pw, ph);
+            const data = canvas.toDataURL('image/png');
+            state.puzzle.pieces.push({ orig: r*cols + c, pos: r*cols + c, src: data });
+          }
+        }
+        renderPuzzlePieces(); shufflePuzzle();
+      }
+      function buildPiecesFallback(src){
+        const size = state.puzzle.size, rows = size, cols = size;
+        state.puzzle.pieces = [];
+        for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) state.puzzle.pieces.push({ orig: r*cols+c, pos: r*cols+c, src: src, r, c });
+        renderPuzzlePieces(true); shufflePuzzle();
+      }
+      function renderPuzzlePieces(fallback=false){
+        const area = $('#puzzle-area'); area.innerHTML = '';
+        const byPos = [...state.puzzle.pieces].sort((a,b)=> Number(a.pos)-Number(b.pos));
+        byPos.forEach(p => {
+          const div = document.createElement('div'); div.className = 'piece'; div.draggable = true; div.dataset.orig = p.orig; div.dataset.pos = p.pos;
+          const img = document.createElement('img'); img.alt='piece';
+          if(!fallback && p.src && p.src.startsWith('data:')) img.src = p.src;
+          else if(fallback){ img.src = p.src; const cols = state.puzzle.size; const posX = (p.c/(cols-1))*100; const posY = (p.r/(cols-1))*100; img.style.width = (cols*100)+'%'; img.style.height = (cols*100)+'%'; img.style.objectFit = 'cover'; img.style.objectPosition = `${posX}% ${posY}%`; }
+          else img.src = p.src;
+          div.appendChild(img);
+          div.addEventListener('dragstart', e=> { e.dataTransfer.setData('text/plain', div.dataset.pos); setTimeout(()=> div.classList.add('hidden'), 50); });
+          div.addEventListener('dragend', e=> div.classList.remove('hidden'));
+          div.addEventListener('dragover', e=> e.preventDefault());
+          div.addEventListener('drop', e=> { e.preventDefault(); const from = e.dataTransfer.getData('text/plain'); const to = div.dataset.pos; swapPieces(from,to); renderPuzzlePieces(fallback); checkPuzzleSolved(true); });
+          area.appendChild(div);
+        });
+      }
+      function shufflePuzzle(){ const positions = state.puzzle.pieces.map(p=>p.pos); for(let i=positions.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [positions[i],positions[j]] = [positions[j],positions[i]] } state.puzzle.pieces.forEach((p,idx)=> p.pos = positions[idx]); renderPuzzlePieces(); }
+      function swapPieces(fromPos,toPos){ fromPos = Number(fromPos); toPos = Number(toPos); const a = state.puzzle.pieces.find(p=>Number(p.pos)===fromPos); const b = state.puzzle.pieces.find(p=>Number(p.pos)===toPos); if(!a||!b) return; const ta=a.pos; a.pos=b.pos; b.pos=ta; }
+      function checkPuzzleSolved(showMessage){
+        const ok = state.puzzle.pieces.every(p => Number(p.pos) === Number(p.orig));
+        if(ok){
+          state.puzzle.solved = true;
+          if(showMessage) $('#puzzle-msg').textContent = "All our memories… just for you 😘";
+          $$('[data-orig]').forEach(el=>el.classList.add('completed'));
+          setTimeout(()=> showScene('final'), 1200);
+          return true;
+        } else {
+          if(showMessage) $('#puzzle-msg').textContent = "Not complete yet, keep trying.";
+          return false;
+        }
+      }
+      async function initPuzzleAuto(){ await initPuzzleWithSrc(DEFAULT_IMAGE); }
+
+      // puzzle UI events
+      $('#use-url').addEventListener('click', ()=> { const url = $('#image-url').value.trim(); if(!url){ $('#img-error').textContent = 'Paste a direct image URL first.'; return; } initPuzzleWithSrc(url); });
+      $('#upload-file').addEventListener('change', (e)=> { const f = e.target.files && e.target.files[0]; if(!f) return; const reader = new FileReader(); reader.onload = ev => initPuzzleWithSrc(ev.target.result); reader.readAsDataURL(f); });
+      $('#shuffle').addEventListener('click', ()=> { shufflePuzzle(); $('#puzzle-msg').textContent = 'Shuffled!'; });
+      $('#check-puzzle').addEventListener('click', ()=> { if(checkPuzzleSolved(true)) $('#puzzle-msg').textContent = 'All our memories… just for you 😘'; });
+      $('#reset-puzzle').addEventListener('click', ()=> { $('#puzzle-area').innerHTML = ''; $('#puzzle-msg').textContent = 'Image reset.'; $('#img-error').textContent = ''; $('#image-url').value = ''; state.puzzle.pieces = []; state.puzzle.imageSrc = ''; });
+
+      // restart
+      $('#restart').addEventListener('click', ()=> { localStorage.removeItem('sou_game_answers'); location.reload(); });
+
+      // Expose for debugging
+      window.sou = { state, initMaze, initPuzzleAuto, saveAnswers, loadAnswers };
+
+      // Show default start
+      showScene('start');
+
+      // If you still see buttons unresponsive:
+      // 1) Open DevTools (F12) -> Console
+      // 2) Paste and run:
+      //    document.getElementById('startBtn')
+      //    window.sou
+      // and send me the results (I will fix any remaining issue).
+      console.log('Game initialized. Default puzzle image: provided link. If needed run local server: python -m http.server');
+    }); // DOMContentLoaded end
+  })();
+  </script>
+</body>
+</html>
